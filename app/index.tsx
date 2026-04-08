@@ -1,11 +1,12 @@
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
+import { useFonts } from "expo-font";
 import { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
+  ImageBackground,
   Platform,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -18,6 +19,10 @@ interface Tarea {
 }
 
 export default function ModalScreen() {
+  const [fontsLoaded] = useFonts({
+    MiFuentePersonalizada: require("../assets/fonts/Damion/Damion-Regular.ttf"),
+  });
+
   const [input, setInput] = useState("");
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [editandoId, setEditandoId] = useState<string | null>(null);
@@ -34,23 +39,12 @@ export default function ModalScreen() {
     }
   };
 
-  //leer una tarea
   const obtenerUnaTarea = async (id: string) => {
     try {
       const respuesta = await fetch(`${API_URL}/${id}`);
       const datos = await respuesta.json();
-
-      // Si la API responde con un array, tomamos el primer elemento [0]
-      // Si responde con un objeto directo, usamos ese objeto
       const tarea = Array.isArray(datos) ? datos[0] : datos.data || datos;
-
-      console.log("Datos recibidos de una tarea:", tarea);
-
-      if (!tarea || !tarea.id) {
-        throw new Error("Formato de datos incorrecto");
-      }
-
-      const mensaje = `DETALLE:\n\nID: ${tarea.id}\nNombre: ${tarea.title}\nEstado: ${tarea.completed ? "✅ Completada" : "⏳ Pendiente"}`;
+      const mensaje = `DETALLE:\n\nID: ${tarea.id}\nNombre: ${tarea.title}\nEstado: ${tarea.completed ? " Completada" : " Pendiente"}`;
 
       if (Platform.OS === "web") {
         window.alert(mensaje);
@@ -58,7 +52,6 @@ export default function ModalScreen() {
         Alert.alert("Información Individual", mensaje);
       }
     } catch (error) {
-      console.log("Error al leer:", error);
       Alert.alert("Error", "No se encontró el detalle de la tarea.");
     }
   };
@@ -92,7 +85,7 @@ export default function ModalScreen() {
       if (respuesta.ok) {
         setInput("");
         setEditandoId(null);
-        obtenerTareas();
+        await obtenerTareas();
       }
     } catch (error) {
       console.error(error);
@@ -110,36 +103,59 @@ export default function ModalScreen() {
 
   useEffect(() => {
     obtenerTareas();
+    const intervalo = setInterval(() => {
+      obtenerTareas();
+    }, 5000);
+    return () => clearInterval(intervalo);
   }, []);
 
+  useEffect(() => {
+    if (tareas.length > 0) {
+      console.log("Lista actualizada. Tareas totales:", tareas.length);
+      console.table(tareas);
+    }
+  }, [tareas]);
+
+  if (!fontsLoaded) return null;
+
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.content}>
-        <ThemedText type="title" style={styles.titulo}>
-          Mi To-Do List
-        </ThemedText>
-
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Nueva tarea..."
-            value={input}
-            onChangeText={setInput}
-            placeholderTextColor="#888"
-          />
-          <TouchableOpacity
-            style={styles.botonPrincipal}
-            onPress={guardarTarea}
-          >
-            <ThemedText style={{ color: "white", fontWeight: "bold" }}>
-              {editandoId ? "OK" : "+"}
-            </ThemedText>
-          </TouchableOpacity>
-        </View>
-
+    <ImageBackground
+      source={{
+        uri: "https://i.pinimg.com/originals/03/5a/6a/035a6a2b61d49f920c3aef034cc4c23b.gif",
+      }}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
         <FlatList
           data={tareas}
           keyExtractor={(item) => item.id.toString()}
+          ListHeaderComponent={
+            <View style={styles.header}>
+              <Text style={styles.titulo}>
+                .𖥔 ݁ ˖๋ ࣭ ⭑(˶˃ ᵕ ˂˶) .ᐟ.ᐟ {"\n"}¡Agrega tu Tarea! {"\n"}
+                ⊹₊˚‧︵‿₊୨ᰔ୧₊‿︵‧˚₊⊹
+              </Text>
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nueva tarea..."
+                  value={input}
+                  onChangeText={setInput}
+                  placeholderTextColor="#888"
+                />
+                <TouchableOpacity
+                  style={styles.botonPrincipal}
+                  onPress={guardarTarea}
+                >
+                  <Text style={{ color: "white", fontWeight: "bold" }}>
+                    {editandoId ? "OK" : "+"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          }
           renderItem={({ item }) => (
             <View style={styles.tareaCard}>
               <TouchableOpacity
@@ -147,14 +163,12 @@ export default function ModalScreen() {
                 style={[
                   styles.circulo,
                   {
-                    backgroundColor: item.completed ? "#007AFF" : "transparent",
+                    backgroundColor: item.completed ? "#6306af" : "transparent",
                   },
                 ]}
               >
                 {item.completed && (
-                  <ThemedText style={{ color: "white", fontSize: 10 }}>
-                    uwu
-                  </ThemedText>
+                  <Text style={{ color: "white", fontSize: 20 }}>✿</Text>
                 )}
               </TouchableOpacity>
 
@@ -162,11 +176,9 @@ export default function ModalScreen() {
                 style={{ flex: 1 }}
                 onPress={() => obtenerUnaTarea(item.id)}
               >
-                <ThemedText
-                  style={[styles.texto, item.completed && styles.tachado]}
-                >
+                <Text style={[styles.texto, item.completed && styles.tachado]}>
                   {item.title}
-                </ThemedText>
+                </Text>
               </TouchableOpacity>
 
               <View style={styles.acciones}>
@@ -176,36 +188,65 @@ export default function ModalScreen() {
                     setEditandoId(item.id);
                   }}
                 >
-                  <ThemedText style={styles.btnEditar}>editar</ThemedText>
+                  <Text style={styles.btnEditar}>editar</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => eliminarTarea(item.id)}>
-                  <ThemedText style={styles.btnBorrar}>borrar</ThemedText>
+                  <Text style={styles.btnBorrar}>borrar</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
+          contentContainerStyle={styles.listContent}
         />
       </View>
-    </ThemedView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", backgroundColor: "#000" },
-  content: { width: "100%", maxWidth: 500, padding: 20, paddingTop: 50 },
-  titulo: { marginBottom: 20, textAlign: "center", color: "#fff" },
-  inputContainer: { flexDirection: "row", marginBottom: 20, gap: 10 },
+  background: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(43, 43, 43, 0.28)",
+  },
+  header: {
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  titulo: {
+    fontSize: 35,
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#fffefe",
+    fontFamily: "MiFuentePersonalizada",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    marginBottom: 20,
+    gap: 10,
+    width: "100%",
+    maxWidth: 500,
+  },
   input: {
     flex: 1,
     borderWidth: 1,
     borderColor: "#333",
     borderRadius: 8,
     padding: 12,
-    backgroundColor: "#111",
+    backgroundColor: "rgba(17, 17, 17, 0.8)",
     color: "white",
   },
   botonPrincipal: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#8801b9c5",
     width: 50,
     borderRadius: 8,
     justifyContent: "center",
@@ -215,23 +256,41 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 15,
-    backgroundColor: "#1c1c1e",
+    backgroundColor: "rgba(43, 0, 81, 0.9)",
     borderRadius: 12,
     marginBottom: 10,
+    maxWidth: 500,
+    alignSelf: "center",
+    width: "100%",
   },
   circulo: {
     width: 26,
     height: 26,
     borderRadius: 13,
     borderWidth: 2,
-    borderColor: "#007AFF",
+    borderColor: "#fcfcfc",
     marginRight: 15,
     justifyContent: "center",
     alignItems: "center",
   },
-  texto: { flex: 1, fontSize: 16, color: "#fff" },
+  texto: {
+    flex: 1,
+    fontSize: 25,
+    color: "#fff",
+    fontFamily: "MiFuentePersonalizada",
+  },
   tachado: { textDecorationLine: "line-through", color: "#666" },
   acciones: { flexDirection: "row", gap: 12 },
-  btnEditar: { color: "#007AFF", fontWeight: "600" },
-  btnBorrar: { color: "#FF3B30", fontWeight: "600" },
+  btnEditar: {
+    color: "#c4dcf5",
+    paddingHorizontal: 10,
+    backgroundColor: "#044a53",
+    borderRadius: 10,
+  },
+  btnBorrar: {
+    color: "#ff0d00",
+    paddingHorizontal: 10,
+    backgroundColor: "#760202",
+    borderRadius: 10,
+  },
 });
